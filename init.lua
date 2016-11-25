@@ -287,7 +287,7 @@ local function rail_on_step(self, dtime)
 		local speed_mod
 		
 		for _,object in ipairs(minetest.env:get_objects_inside_radius(pos, 1.5)) do
-			if object:is_player() then
+			if object:is_player() and object:get_player_name() ~= self.driver then
 				--player's position
 				local pos2 = object:getpos()
 				local modify = {}
