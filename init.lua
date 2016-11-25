@@ -183,6 +183,7 @@ local function rail_on_step(self, dtime)
 	local railparams = carts.railparams[node.name] or {}
 
 	local vel = self.object:getvelocity()
+		
 	local update = {}
 	if self.punched then
 		vel = vector.add(vel, self.velocity)
@@ -225,17 +226,8 @@ local function rail_on_step(self, dtime)
 		if player then
 			ctrl = player:get_player_control()
 		end
-	--check if player is in area
-	else
-		for _,object in ipairs(minetest.env:get_objects_inside_radius(pos, 1)) do
-			if object:is_player() then
-				--player's position
-				local pos2 = object:getpos()
-				
-			end
-		end
 	end
-
+	
 	if self.old_pos then
 		-- Detection for "skipping" nodes
 		local expected_pos = vector.add(self.old_pos, self.old_dir)
@@ -259,6 +251,7 @@ local function rail_on_step(self, dtime)
 	)
 
 	local new_acc = {x=0, y=0, z=0}
+	
 	if vector.equals(dir, {x=0, y=0, z=0}) then
 		vel = {x=0, y=0, z=0}
 		pos = vector.round(pos)
@@ -289,7 +282,28 @@ local function rail_on_step(self, dtime)
 		local acc = dir.y * -4.0
 
 		-- no need to check for railparams == nil since we always make it exist.
-		local speed_mod = railparams.acceleration
+		
+		--allow players to move carts by pushing them
+		local speed_mod
+		
+		for _,object in ipairs(minetest.env:get_objects_inside_radius(pos, 1.5)) do
+			if object:is_player() then
+				--player's position
+				local pos2 = object:getpos()
+				local modify = {}
+				modify.x = (pos.x - pos2.x) * (dir.x*2)
+				modify.z = (pos.z - pos2.z) * (dir.z*2)
+				if modify.x ~= 0 then
+					speed_mod = modify.x
+				elseif modify.z ~= 0 then
+					speed_mod = modify.z
+				end
+			end
+		end
+		
+		if not speed_mod then
+			speed_mod = railparams.acceleration
+		end
 		if speed_mod and speed_mod ~= 0 then
 			-- Try to make it similar to the original carts mod
 			acc = acc + speed_mod
