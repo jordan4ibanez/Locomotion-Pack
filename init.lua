@@ -183,7 +183,31 @@ local function rail_on_step(self, dtime)
 	local railparams = carts.railparams[node.name] or {}
 
 	local vel = self.object:getvelocity()
-		
+	
+	--allow players to push carts around with their presence
+	if self.old_vel.x == 0 and self.old_vel.y == 0 and self.old_vel.z == 0 then
+		for _,object in ipairs(minetest.env:get_objects_inside_radius(pos, 1.5)) do
+			if object:is_player() and object:get_player_name() ~= self.driver then
+				--player's position
+				local pos2 = object:getpos()
+						
+				local cart_dir = carts:get_rail_direction(pos, {x=(pos.x-pos2.x)*2,y=0,z=(pos.z-pos2.z)*2}, nil, nil, self.railtype)
+				
+				if vector.equals(cart_dir, {x=0, y=0, z=0}) then
+					return
+				end
+
+				local punch_interval = 1
+				time_from_last_punch = math.min(time_from_last_punch or punch_interval, punch_interval)
+				local f = 2 * (time_from_last_punch / punch_interval)
+
+				self.velocity = vector.multiply(cart_dir, f)
+				self.old_dir = cart_dir
+				self.punched = true
+			end
+		end
+	end
+	
 	local update = {}
 	if self.punched then
 		vel = vector.add(vel, self.velocity)
