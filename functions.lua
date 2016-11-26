@@ -220,7 +220,73 @@ function carts:get_rail_groups(additional_groups)
 	return groups
 end
 
-function carts:couple(player)
+function carts:couple_cart(cart,player)
+	local name = player:get_player_name()
+	if carts.couple[name] == nil then
+		carts.couple[name] = cart:get_luaentity()
+		print("Click other cart to connect")
+	else --assume entity still exists in the world - make sure to update coupled cart on deletion
+		if carts.couple[name] == cart:get_luaentity() then
+			print("You can't couple a cart to itself!")
+		else
+			if  carts.couple[name].object:get_luaentity() then
+				carts.couple[name].couple1 =  cart:get_luaentity()
+				carts.couple[name] = nil
+				print("Coupled!")
+			else
+				print("Cart doesn't exist!")
+				carts.couple[name] = nil
+			end
+		end
+	end
+end
 
+function carts:start_magnet(self,object)
+	--magnetise towards the other one
+	--print(dump(object:get_luaentity()))
+	local pos = self.object:getpos()
+	if object:get_luaentity().cart and object:get_luaentity() == self.couple1 then
+		local pos2 = object:getpos()
+						
+		local cart_dir = carts:get_rail_direction(pos, {x=(pos2.x-pos.x),y=pos.y,z=(pos2.z-pos.z)}, nil, nil, self.railtype)
+		
+		if vector.equals(cart_dir, {x=0, y=0, z=0}) then
+			return
+		end
+		local dist = vector.distance(pos, pos2)
+		
+		local vel = dist
+		vel = vel
+		local punch_interval = 1
+		time_from_last_punch = math.min(time_from_last_punch or punch_interval, punch_interval)
+		local f = vel * (time_from_last_punch / punch_interval)
+		--print(f)
+		self.velocity = vector.multiply(cart_dir, f)
+		self.old_dir = cart_dir
+		self.punched = true
+		print("started magnet")
+	end
+end
 
+function carts:cart_repulsion_start(self,object)
+	--set the carts velocity using player's around
+	local pos  = self.object:getpos()
+	local pos2 = object:getpos()
+						
+	local cart_dir = carts:get_rail_direction(pos, {x=(pos.x-pos2.x),y=pos.y,z=(pos.z-pos2.z)}, nil, nil, self.railtype)
+	
+	if vector.equals(cart_dir, {x=0, y=0, z=0}) then
+		return
+	end
+	local dist = vector.distance(pos, pos2)
+	
+	local vel = 1.5-dist
+	vel = vel * 3
+	local punch_interval = 1
+	time_from_last_punch = math.min(time_from_last_punch or punch_interval, punch_interval)
+	local f = vel * (time_from_last_punch / punch_interval)
+	--print(f)
+	self.velocity = vector.multiply(cart_dir, f)
+	self.old_dir = cart_dir
+	self.punched = true
 end

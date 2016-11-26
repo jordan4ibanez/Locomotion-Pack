@@ -81,9 +81,8 @@ function cart_entity:on_rightclick(clicker)
 	end
 	local player_name = clicker:get_player_name()
 	local item = clicker:get_wielded_item():to_string()
-	print(item)
 	if item == "carts:crowbar" then
-		print("couple")
+		carts:couple_cart(self.object,clicker)
 	else
 		if self.driver and player_name == self.driver then
 			self.driver = nil
@@ -235,71 +234,14 @@ local function rail_on_step(self, dtime)
 	if not self.old_vel or self.old_vel.x == 0 and self.old_vel.y == 0 and self.old_vel.z == 0 then
 		for _,object in ipairs(minetest.env:get_objects_inside_radius(pos, 1.5)) do
 			--if there is an ent coupled to it, check for it
-			if self.couple1 or self.couple2 then
-				--magnetise towards the other one
-				if object:get_luaentity().cart and object == self.couple1 then
-					local pos2 = object:getpos()
-									
-					local cart_dir = carts:get_rail_direction(pos, {x=(pos2.x-pos.x),y=pos.y,z=(pos2.z-pos.z)}, nil, nil, self.railtype)
-					
-					if vector.equals(cart_dir, {x=0, y=0, z=0}) then
-						return
-					end
-					local dist = vector.distance(pos, pos2)
-					
-					local vel = dist
-					vel = vel * 3
-					local punch_interval = 1
-					time_from_last_punch = math.min(time_from_last_punch or punch_interval, punch_interval)
-					local f = vel * (time_from_last_punch / punch_interval)
-					--print(f)
-					self.velocity = vector.multiply(cart_dir, f)
-					self.old_dir = cart_dir
-					self.punched = true
-					print("magnet1")
+			if self.couple1 ~= nil or self.couple2 ~= nil then
+				if not object:is_player() then
+					carts:start_magnet(self,object)
 				end
-		
 			elseif object:is_player() and object:get_player_name() ~= self.driver then
-				--set the carts velocity using player's around
-				local pos2 = object:getpos()
-									
-				local cart_dir = carts:get_rail_direction(pos, {x=(pos.x-pos2.x),y=pos.y,z=(pos.z-pos2.z)}, nil, nil, self.railtype)
-				
-				if vector.equals(cart_dir, {x=0, y=0, z=0}) then
-					return
-				end
-				local dist = vector.distance(pos, pos2)
-				
-				local vel = 1.5-dist
-				vel = vel * 3
-				local punch_interval = 1
-				time_from_last_punch = math.min(time_from_last_punch or punch_interval, punch_interval)
-				local f = vel * (time_from_last_punch / punch_interval)
-				--print(f)
-				self.velocity = vector.multiply(cart_dir, f)
-				self.old_dir = cart_dir
-				self.punched = true
-			elseif not object:is_player() and self.object ~= object and object:get_luaentity().cart == true and (not self.old_vel or self.old_vel.x == 0 and self.old_vel.y == 0 and self.old_vel.z == 0) then
-				--cart's vel using carts around
-				local pos2 = object:getpos()
-									
-				local cart_dir = carts:get_rail_direction(pos, {x=(pos.x-pos2.x),y=pos.y,z=(pos.z-pos2.z)}, nil, nil, self.railtype)
-				
-				if vector.equals(cart_dir, {x=0, y=0, z=0}) then
-					return
-				end
-				local dist = vector.distance(pos, pos2)
-				
-				local vel = 1.5-dist
-				vel = vel * 3
-				local punch_interval = 1
-				time_from_last_punch = math.min(time_from_last_punch or punch_interval, punch_interval)
-				local f = vel * (time_from_last_punch / punch_interval)
-				--print(f)
-				self.velocity = vector.multiply(cart_dir, f)
-				self.old_dir = cart_dir
-				self.punched = true
-				
+				carts:cart_repulsion_start(self,object)
+			elseif not object:is_player() and self.object ~= object and object:get_luaentity().cart == true then
+				carts:cart_repulsion_start(self,object)
 			end
 		end
 	end
@@ -405,42 +347,71 @@ local function rail_on_step(self, dtime)
 		
 		--allow players to move carts by pushing them
 		local speed_mod
-		
-		for _,object in ipairs(minetest.env:get_objects_inside_radius(pos, 1.5)) do
-			if self.couple1 or self.couple2 then
-				if object:get_luaentity().cart and object == self.couple1 then
-					--couplers's position
+		--magnetize carts towards coupled carts
+		if self.couple1 or self.couple2 then
+			for _,object in ipairs(minetest.env:get_objects_inside_radius(pos, 5)) do
+				--magnetise towards other carts
+				if object:get_player_name() == self.couple1 then
 					local pos2 = object:getpos()
 					local modify = {}
 					modify.x = (pos2.x - pos.x) * (dir.x*2)
 					modify.z = (pos2.z - pos.z) * (dir.z*2)
+					if vector.distance(pos, pos2) > 1 then
+						if modify.x ~= 0 then
+							speed_mod = modify.x
+						elseif modify.z ~= 0 then
+							speed_mod = modify.z
+						end
+					else
+						speed_mod = -3
+					end		
+				end
+				--[[
+				if not object:is_player() then
+					if object:get_luaentity().cart and object == self.couple1 then
+						--couplers's position
+						local pos2 = object:getpos()
+						local modify = {}
+						modify.x = (pos2.x - pos.x) * (dir.x*2)
+						modify.z = (pos2.z - pos.z) * (dir.z*2)
+						if vector.distance(pos, pos2) > 1 then
+							if modify.x ~= 0 then
+								speed_mod = modify.x
+							elseif modify.z ~= 0 then
+								speed_mod = modify.z
+							end
+						else
+							speed_mod = -3
+						end
+					end
+				end
+				]]--
+			end
+		else
+			for _,object in ipairs(minetest.env:get_objects_inside_radius(pos, 1.5)) do
+
+				if object:is_player() and object:get_player_name() ~= self.driver then
+					--player's position
+					local pos2 = object:getpos()
+					local modify = {}
+					modify.x = (pos.x - pos2.x) * (dir.x*2)
+					modify.z = (pos.z - pos2.z) * (dir.z*2)
 					if modify.x ~= 0 then
 						speed_mod = modify.x
 					elseif modify.z ~= 0 then
 						speed_mod = modify.z
 					end
-				end
-			elseif object:is_player() and object:get_player_name() ~= self.driver then
-				--player's position
-				local pos2 = object:getpos()
-				local modify = {}
-				modify.x = (pos.x - pos2.x) * (dir.x*2)
-				modify.z = (pos.z - pos2.z) * (dir.z*2)
-				if modify.x ~= 0 then
-					speed_mod = modify.x
-				elseif modify.z ~= 0 then
-					speed_mod = modify.z
-				end
-			elseif self.object ~= object and object:get_luaentity().cart == true then
-				--cart's position
-				local pos2 = object:getpos()
-				local modify = {}
-				modify.x = (pos.x - pos2.x) * (dir.x*2)
-				modify.z = (pos.z - pos2.z) * (dir.z*2)
-				if modify.x ~= 0 then
-					speed_mod = modify.x
-				elseif modify.z ~= 0 then
-					speed_mod = modify.z
+				elseif self.object ~= object and object:get_luaentity().cart == true then
+					--cart's position
+					local pos2 = object:getpos()
+					local modify = {}
+					modify.x = (pos.x - pos2.x) * (dir.x*2)
+					modify.z = (pos.z - pos2.z) * (dir.z*2)
+					if modify.x ~= 0 then
+						speed_mod = modify.x
+					elseif modify.z ~= 0 then
+						speed_mod = modify.z
+					end
 				end
 			end
 		end
