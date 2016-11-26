@@ -1,4 +1,29 @@
 
+--[[goals:
+Literally copied from forum post
+
+Tunneler
+A node/entity which digs 3x3 into the ground or wall which places power rail or ladders depending on the direction. 
+Powered by coal or fuel items and gets items (rails, coal, torches) placed in it and uses them to power itself and place rails 
+or ladders where it's going.
+
+Locomotion Pack
+Modified default carts which does a few things extra. 
+You can place chests, furnaces, a tunnel boar(hence tunneler mod), and tnt in it. 
+
+A crowbar to link carts to each other. Furnace in carts allows you to open up a gui in the cart and put in fuel and adjust speed. 
+With the cart linking the furnace cart would pull anything behind it or push anything in front of it...some how. 
+Chest carts work like chests. Tunneler carts do what is above. 
+
+A hopper cart which collects items around it, can be linked behind chest carts to put items in chests. 
+These could have a setting to force load the mapblocks around it to have automated world trains placed 
+by admins that can't be destroyed by players to take them to shops, houses, or other things.
+
+You could create an automated bore-ing train like this:
+Bore-Hopper-Chest-Furnace-Optional Default Cart to ride in
+]]--
+
+
 carts = {}
 carts.modpath = minetest.get_modpath("carts")
 carts.railparams = {}
@@ -7,11 +32,6 @@ carts.railparams = {}
 carts.speed_max = 7
 -- Set to -1 to disable punching the cart from inside (min = -1)
 carts.punch_speed_max = 5
-
-
---[[goals:
-
-]]--
 
 dofile(carts.modpath.."/functions.lua")
 dofile(carts.modpath.."/rails.lua")
@@ -39,6 +59,11 @@ local cart_entity = {
 	old_switch = 0,
 	railtype = nil,
 	attached_items = {}
+	
+	--cart attachment vars "Cart coupling"
+	--only allow two attachment because 
+	attachment1 = "singleplayer",
+	attachment2 = nil,
 }
 
 function cart_entity:on_rightclick(clicker)
