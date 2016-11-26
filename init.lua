@@ -9,6 +9,10 @@ carts.speed_max = 7
 carts.punch_speed_max = 5
 
 
+--[[goals:
+
+]]--
+
 dofile(carts.modpath.."/functions.lua")
 dofile(carts.modpath.."/rails.lua")
 
@@ -19,12 +23,14 @@ end
 
 local cart_entity = {
 	physical = false, -- otherwise going uphill breaks
+	--collide_with_objects = true, -- collides with players and other carts
 	collisionbox = {-0.5, -0.5, -0.5, 0.5, 0.5, 0.5},
 	visual = "mesh",
 	mesh = "carts_cart.b3d",
 	visual_size = {x=1, y=1},
 	textures = {"carts_cart.png"},
 
+	cart = true,
 	driver = nil,
 	punched = false, -- used to re-send velocity and position
 	velocity = {x=0, y=0, z=0}, -- only used on punch
@@ -189,22 +195,46 @@ local function rail_on_step(self, dtime)
 	if not self.old_vel or self.old_vel.x == 0 and self.old_vel.y == 0 and self.old_vel.z == 0 then
 		for _,object in ipairs(minetest.env:get_objects_inside_radius(pos, 1.5)) do
 			if object:is_player() and object:get_player_name() ~= self.driver then
-				--player's position
+				--set the carts velocity using player's around
 				local pos2 = object:getpos()
-						
-				local cart_dir = carts:get_rail_direction(pos, {x=(pos.x-pos2.x)*2,y=0,z=(pos.z-pos2.z)*2}, nil, nil, self.railtype)
+									
+				local cart_dir = carts:get_rail_direction(pos, {x=(pos.x-pos2.x),y=pos.y,z=(pos.z-pos2.z)}, nil, nil, self.railtype)
 				
 				if vector.equals(cart_dir, {x=0, y=0, z=0}) then
 					return
 				end
-
+				local dist = vector.distance(pos, pos2)
+				
+				local vel = 1.5-dist
+				vel = vel * 3
 				local punch_interval = 1
 				time_from_last_punch = math.min(time_from_last_punch or punch_interval, punch_interval)
-				local f = 2 * (time_from_last_punch / punch_interval)
-
+				local f = vel * (time_from_last_punch / punch_interval)
+				--print(f)
 				self.velocity = vector.multiply(cart_dir, f)
 				self.old_dir = cart_dir
 				self.punched = true
+			elseif not object:is_player() and self.object ~= object and object:get_luaentity().cart == true and (not self.old_vel or self.old_vel.x == 0 and self.old_vel.y == 0 and self.old_vel.z == 0) then
+				--cart's vel using carts around
+				local pos2 = object:getpos()
+									
+				local cart_dir = carts:get_rail_direction(pos, {x=(pos.x-pos2.x),y=pos.y,z=(pos.z-pos2.z)}, nil, nil, self.railtype)
+				
+				if vector.equals(cart_dir, {x=0, y=0, z=0}) then
+					return
+				end
+				local dist = vector.distance(pos, pos2)
+				
+				local vel = 1.5-dist
+				vel = vel * 3
+				local punch_interval = 1
+				time_from_last_punch = math.min(time_from_last_punch or punch_interval, punch_interval)
+				local f = vel * (time_from_last_punch / punch_interval)
+				--print(f)
+				self.velocity = vector.multiply(cart_dir, f)
+				self.old_dir = cart_dir
+				self.punched = true
+				
 			end
 		end
 	end
@@ -314,6 +344,17 @@ local function rail_on_step(self, dtime)
 		for _,object in ipairs(minetest.env:get_objects_inside_radius(pos, 1.5)) do
 			if object:is_player() and object:get_player_name() ~= self.driver then
 				--player's position
+				local pos2 = object:getpos()
+				local modify = {}
+				modify.x = (pos.x - pos2.x) * (dir.x*2)
+				modify.z = (pos.z - pos2.z) * (dir.z*2)
+				if modify.x ~= 0 then
+					speed_mod = modify.x
+				elseif modify.z ~= 0 then
+					speed_mod = modify.z
+				end
+			elseif self.object ~= object and object:get_luaentity().cart == true then
+				--cart's position
 				local pos2 = object:getpos()
 				local modify = {}
 				modify.x = (pos.x - pos2.x) * (dir.x*2)
