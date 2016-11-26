@@ -49,8 +49,8 @@ end
 carts.couple = {}
 
 local cart_entity = {
-	physical = false, -- otherwise going uphill breaks
-	--collide_with_objects = true, -- collides with players and other carts
+	physical = true, -- otherwise going uphill breaks
+	collide_with_objects = true, -- collides with players and other carts
 	collisionbox = {-0.5, -0.5, -0.5, 0.5, 0.5, 0.5},
 	visual = "mesh",
 	mesh = "carts_cart.b3d",

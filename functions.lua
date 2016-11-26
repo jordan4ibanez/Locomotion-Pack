@@ -231,6 +231,7 @@ function carts:couple_cart(cart,player)
 		else
 			if  carts.couple[name].object:get_luaentity() then
 				carts.couple[name].couple1 =  cart:get_luaentity()
+				cart:get_luaentity().couple2 = carts.couple[name].object:get_luaentity()
 				carts.couple[name] = nil
 				print("Coupled!")
 			else
