@@ -51,7 +51,7 @@ carts.couple = {}
 local cart_entity = {
 	physical = true, -- otherwise going uphill breaks
 	collide_with_objects = true, -- collides with players and other carts
-	collisionbox = {-0.5, -0.5, -0.5, 0.5, 0.5, 0.5},
+	collisionbox = {-0.5, 1.0, -0.5, 0.5, 1.5, 0.5},
 	visual = "mesh",
 	mesh = "carts_cart.b3d",
 	visual_size = {x=1, y=1},
@@ -83,6 +83,13 @@ function cart_entity:on_rightclick(clicker)
 	local item = clicker:get_wielded_item():to_string()
 	if item == "carts:crowbar" then
 		carts:couple_cart(self.object,clicker)
+	elseif item == "default:furnace" then
+		-- Collect dropped items
+		local obj = minetest.add_item(self.object:getpos(), item)
+		print(dump(obj:get_luaentity().itemstring))
+		obj:set_attach(self.object, "", {x=0, y=0, z=0}, {x=0, y=0, z=0})
+		self.attached_items[#self.attached_items + 1] = obj
+
 	else
 		if self.driver and player_name == self.driver then
 			self.driver = nil
@@ -232,7 +239,7 @@ local function rail_on_step(self, dtime)
 	--allow players to push carts around with their presence
 	
 	if not self.old_vel or self.old_vel.x == 0 and self.old_vel.y == 0 and self.old_vel.z == 0 then
-		for _,object in ipairs(minetest.env:get_objects_inside_radius(pos, 1.5)) do
+		for _,object in ipairs(minetest.env:get_objects_inside_radius(pos, 2)) do
 			--if there is an ent coupled to it, check for it
 			if self.couple1 ~= nil or self.couple2 ~= nil then
 				if not object:is_player() then
@@ -386,20 +393,10 @@ local function rail_on_step(self, dtime)
 	self.old_switch = switch_keys
 
 	if self.punched then
-		-- Collect dropped items
-		for _,obj_ in ipairs(minetest.get_objects_inside_radius(pos, 1)) do
-			if not obj_:is_player() and
-					obj_:get_luaentity() and
-					not obj_:get_luaentity().physical_state and
-					obj_:get_luaentity().name == "__builtin:item" then
-
-				obj_:set_attach(self.object, "", {x=0, y=0, z=0}, {x=0, y=0, z=0})
-				self.attached_items[#self.attached_items + 1] = obj_
-			end
-		end
 		self.punched = false
 		update.vel = true
 	end
+
 
 	if not (update.vel or update.pos) then
 		rail_on_step_event(railparams.on_step, self, dtime)

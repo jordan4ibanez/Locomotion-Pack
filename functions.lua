@@ -290,6 +290,7 @@ function carts:cart_repulsion_start(self,object)
 	self.velocity = vector.multiply(cart_dir, f)
 	self.old_dir = cart_dir
 	self.punched = true
+	return(time_from_last_punch)
 end
 
 
@@ -336,7 +337,7 @@ function carts:cart_physical_interactions(self,dir)
 			]]--
 		end
 	else --repel carts from other carts and players
-		for _,object in ipairs(minetest.env:get_objects_inside_radius(pos, 1.5)) do
+		for _,object in ipairs(minetest.env:get_objects_inside_radius(pos, 2)) do
 
 			if object:is_player() and object:get_player_name() ~= self.driver then
 				--player's position
@@ -349,7 +350,7 @@ function carts:cart_physical_interactions(self,dir)
 				elseif modify.z ~= 0 then
 					speed_mod = modify.z
 				end
-			elseif self.object ~= object and object:get_luaentity().cart == true then
+			elseif not object:is_player() and self.object ~= object and object:get_luaentity().cart == true then
 				--cart's position
 				local pos2 = object:getpos()
 				local modify = {}
