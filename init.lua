@@ -346,75 +346,9 @@ local function rail_on_step(self, dtime)
 		-- no need to check for railparams == nil since we always make it exist.
 		
 		--allow players to move carts by pushing them
-		local speed_mod
-		--magnetize carts towards coupled carts
-		if self.couple1 or self.couple2 then
-			for _,object in ipairs(minetest.env:get_objects_inside_radius(pos, 5)) do
-				--magnetise towards other carts
-				if object:get_player_name() == self.couple1 then
-					local pos2 = object:getpos()
-					local modify = {}
-					modify.x = (pos2.x - pos.x) * (dir.x*2)
-					modify.z = (pos2.z - pos.z) * (dir.z*2)
-					if vector.distance(pos, pos2) > 1 then
-						if modify.x ~= 0 then
-							speed_mod = modify.x
-						elseif modify.z ~= 0 then
-							speed_mod = modify.z
-						end
-					else
-						speed_mod = -3
-					end		
-				end
-				--[[
-				if not object:is_player() then
-					if object:get_luaentity().cart and object == self.couple1 then
-						--couplers's position
-						local pos2 = object:getpos()
-						local modify = {}
-						modify.x = (pos2.x - pos.x) * (dir.x*2)
-						modify.z = (pos2.z - pos.z) * (dir.z*2)
-						if vector.distance(pos, pos2) > 1 then
-							if modify.x ~= 0 then
-								speed_mod = modify.x
-							elseif modify.z ~= 0 then
-								speed_mod = modify.z
-							end
-						else
-							speed_mod = -3
-						end
-					end
-				end
-				]]--
-			end
-		else
-			for _,object in ipairs(minetest.env:get_objects_inside_radius(pos, 1.5)) do
+		local speed_mod = carts:cart_physical_interactions(self,dir)
 
-				if object:is_player() and object:get_player_name() ~= self.driver then
-					--player's position
-					local pos2 = object:getpos()
-					local modify = {}
-					modify.x = (pos.x - pos2.x) * (dir.x*2)
-					modify.z = (pos.z - pos2.z) * (dir.z*2)
-					if modify.x ~= 0 then
-						speed_mod = modify.x
-					elseif modify.z ~= 0 then
-						speed_mod = modify.z
-					end
-				elseif self.object ~= object and object:get_luaentity().cart == true then
-					--cart's position
-					local pos2 = object:getpos()
-					local modify = {}
-					modify.x = (pos.x - pos2.x) * (dir.x*2)
-					modify.z = (pos.z - pos2.z) * (dir.z*2)
-					if modify.x ~= 0 then
-						speed_mod = modify.x
-					elseif modify.z ~= 0 then
-						speed_mod = modify.z
-					end
-				end
-			end
-		end
+		
 		
 		if not speed_mod then
 			speed_mod = railparams.acceleration
