@@ -21,6 +21,9 @@ by admins that can't be destroyed by players to take them to shops, houses, or o
 
 You could create an automated bore-ing train like this:
 Bore-Hopper-Chest-Furnace-Optional Default Cart to ride in
+
+Torch Cart
+adds in cart which lights up area
 ]]--
 
 
@@ -35,11 +38,15 @@ carts.punch_speed_max = 5
 
 dofile(carts.modpath.."/functions.lua")
 dofile(carts.modpath.."/rails.lua")
+dofile(carts.modpath.."/crowbar.lua")
 
 -- Support for non-default games
 if not default.player_attached then
 	default.player_attached = {}
 end
+
+-- Add support to couple carts together
+carts.couple = {}
 
 local cart_entity = {
 	physical = false, -- otherwise going uphill breaks
@@ -58,12 +65,14 @@ local cart_entity = {
 	old_pos = nil,
 	old_switch = 0,
 	railtype = nil,
-	attached_items = {}
+	attached_items = {},
 	
 	--cart attachment vars "Cart coupling"
 	--only allow two attachment because 
-	attachment1 = "singleplayer",
-	attachment2 = nil,
+	couple1 = nil,
+	couple2 = nil,
+	
+	--vars for allowing player's to turn carts into furnace,chest, and borer carts
 }
 
 function cart_entity:on_rightclick(clicker)
@@ -71,12 +80,18 @@ function cart_entity:on_rightclick(clicker)
 		return
 	end
 	local player_name = clicker:get_player_name()
-	if self.driver and player_name == self.driver then
-		self.driver = nil
-		carts:manage_attachment(clicker, nil)
-	elseif not self.driver then
-		self.driver = player_name
-		carts:manage_attachment(clicker, self.object)
+	local item = clicker:get_wielded_item():to_string()
+	print(item)
+	if item == "carts:crowbar" then
+		print("couple")
+	else
+		if self.driver and player_name == self.driver then
+			self.driver = nil
+			carts:manage_attachment(clicker, nil)
+		elseif not self.driver then
+			self.driver = player_name
+			carts:manage_attachment(clicker, self.object)
+		end
 	end
 end
 
@@ -219,7 +234,32 @@ local function rail_on_step(self, dtime)
 	
 	if not self.old_vel or self.old_vel.x == 0 and self.old_vel.y == 0 and self.old_vel.z == 0 then
 		for _,object in ipairs(minetest.env:get_objects_inside_radius(pos, 1.5)) do
-			if object:is_player() and object:get_player_name() ~= self.driver then
+			--if there is an ent coupled to it, check for it
+			if self.couple1 or self.couple2 then
+				--magnetise towards the other one
+				if object:get_luaentity().cart and object == self.couple1 then
+					local pos2 = object:getpos()
+									
+					local cart_dir = carts:get_rail_direction(pos, {x=(pos2.x-pos.x),y=pos.y,z=(pos2.z-pos.z)}, nil, nil, self.railtype)
+					
+					if vector.equals(cart_dir, {x=0, y=0, z=0}) then
+						return
+					end
+					local dist = vector.distance(pos, pos2)
+					
+					local vel = dist
+					vel = vel * 3
+					local punch_interval = 1
+					time_from_last_punch = math.min(time_from_last_punch or punch_interval, punch_interval)
+					local f = vel * (time_from_last_punch / punch_interval)
+					--print(f)
+					self.velocity = vector.multiply(cart_dir, f)
+					self.old_dir = cart_dir
+					self.punched = true
+					print("magnet1")
+				end
+		
+			elseif object:is_player() and object:get_player_name() ~= self.driver then
 				--set the carts velocity using player's around
 				local pos2 = object:getpos()
 									
@@ -367,7 +407,20 @@ local function rail_on_step(self, dtime)
 		local speed_mod
 		
 		for _,object in ipairs(minetest.env:get_objects_inside_radius(pos, 1.5)) do
-			if object:is_player() and object:get_player_name() ~= self.driver then
+			if self.couple1 or self.couple2 then
+				if object:get_luaentity().cart and object == self.couple1 then
+					--couplers's position
+					local pos2 = object:getpos()
+					local modify = {}
+					modify.x = (pos2.x - pos.x) * (dir.x*2)
+					modify.z = (pos2.z - pos.z) * (dir.z*2)
+					if modify.x ~= 0 then
+						speed_mod = modify.x
+					elseif modify.z ~= 0 then
+						speed_mod = modify.z
+					end
+				end
+			elseif object:is_player() and object:get_player_name() ~= self.driver then
 				--player's position
 				local pos2 = object:getpos()
 				local modify = {}

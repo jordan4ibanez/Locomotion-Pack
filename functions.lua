@@ -219,3 +219,8 @@ function carts:get_rail_groups(additional_groups)
 	end
 	return groups
 end
+
+function carts:couple(player)
+
+
+end
