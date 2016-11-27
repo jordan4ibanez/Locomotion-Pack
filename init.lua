@@ -239,16 +239,20 @@ local function rail_on_step(self, dtime)
 	--allow players to push carts around with their presence
 	
 	if not self.old_vel or self.old_vel.x == 0 and self.old_vel.y == 0 and self.old_vel.z == 0 then
+		--normal repulsion
 		for _,object in ipairs(minetest.env:get_objects_inside_radius(pos, 2)) do
 			--if there is an ent coupled to it, check for it
+			if object:is_player() and object:get_player_name() ~= self.driver then
+				carts:cart_repulsion_start(self,object)
+			elseif not object:is_player() and self.object ~= object and object:get_luaentity().cart == true then
+				carts:cart_repulsion_start(self,object)
+			end
+		end
+		for _,object in ipairs(minetest.env:get_objects_inside_radius(pos, 6)) do
 			if self.couple1 ~= nil or self.couple2 ~= nil then
 				if not object:is_player() then
 					carts:start_magnet(self,object)
 				end
-			elseif object:is_player() and object:get_player_name() ~= self.driver then
-				carts:cart_repulsion_start(self,object)
-			elseif not object:is_player() and self.object ~= object and object:get_luaentity().cart == true then
-				carts:cart_repulsion_start(self,object)
 			end
 		end
 	end
