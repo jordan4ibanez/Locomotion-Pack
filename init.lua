@@ -243,15 +243,11 @@ local function rail_on_step(self, dtime)
 		--furnace cart
 		print("trying")
 		if self.attached_item and self.attached_item:get_luaentity().itemstring == "default:furnace" then
-			local cart_dir = carts:get_rail_direction(pos, self.old_dir, nil, nil, self.railtype)
-			if vector.equals(cart_dir, {x=0, y=0, z=0}) then
-				return
-			end
-
+			--local cart_dir = carts:get_rail_direction(pos, self.old_dir, nil, nil, self.railtype)
 			local punch_interval = 1
 			time_from_last_punch = math.min(time_from_last_punch or punch_interval, punch_interval)
 			local f = 3 * (time_from_last_punch / punch_interval)
-			self.velocity = vector.multiply(cart_dir, f)
+			self.velocity = vector.multiply(self.old_dir, f)
 			self.old_dir = cart_dir
 			self.punched = true
 			print("started furnace cart")
