@@ -65,7 +65,7 @@ local cart_entity = {
 	old_pos = nil,
 	old_switch = 0,
 	railtype = nil,
-	attached_items = {},
+	attached_item = nil,
 	
 	--cart attachment vars "Cart coupling"
 	--only allow two attachment because 
@@ -80,16 +80,17 @@ function cart_entity:on_rightclick(clicker)
 		return
 	end
 	local player_name = clicker:get_player_name()
-	local item = clicker:get_wielded_item():to_string()
+	local item = clicker:get_wielded_item():to_table().name
+
 	if item == "carts:crowbar" then
 		carts:couple_cart(self.object,clicker)
 	elseif item == "default:furnace" then
 		-- Collect dropped items
 		local obj = minetest.add_item(self.object:getpos(), item)
-		print(dump(obj:get_luaentity().itemstring))
-		obj:set_attach(self.object, "", {x=0, y=0, z=0}, {x=0, y=0, z=0})
-		self.attached_items[#self.attached_items + 1] = obj
-
+		--print(dump(obj:get_luaentity().itemstring))
+		obj:set_attach(self.object, "", {x=0, y=5, z=0}, {x=0, y=0, z=0})
+		self.attached_item= obj
+		obj:set_properties({visual_size = {x=0.5,y=0.5}})
 	else
 		if self.driver and player_name == self.driver then
 			self.driver = nil
@@ -156,11 +157,11 @@ function cart_entity:on_punch(puncher, time_from_last_punch, tool_capabilities, 
 			local player = minetest.get_player_by_name(self.driver)
 			carts:manage_attachment(player, nil)
 		end
-		for _,obj_ in ipairs(self.attached_items) do
-			if obj_ then
-				obj_:set_detach()
-			end
+
+		if self.attached_item then
+			self.attached_item:set_detach()
 		end
+
 
 		local leftover = puncher:get_inventory():add_item("main", "carts:cart")
 		if not leftover:is_empty() then
@@ -359,7 +360,19 @@ local function rail_on_step(self, dtime)
 		--allow players to move carts by pushing them
 		local speed_mod = carts:cart_physical_interactions(self,dir)
 
-		
+		if self.attached_item and self.attached_item:get_luaentity().itemstring == "default:furnace" then
+			speed_mod = carts.speed_max
+			minetest.add_particle({
+				pos = {x=pos.x, y=pos.y + 1, z=pos.z},
+				velocity = {x=0, y=0, z=0},
+				acceleration = {x=0, y=3, z=0},
+				expirationtime = 1,
+				size = math.random(1,3),
+				collisiondetection = false,
+				vertical = false,
+				texture = "carts_smoke.png",
+			})
+		end
 		
 		if not speed_mod then
 			speed_mod = railparams.acceleration

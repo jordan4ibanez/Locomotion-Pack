@@ -298,9 +298,10 @@ function carts:cart_physical_interactions(self,dir)
 	local speed_mod
 	local pos = self.object:getpos()
 	if self.couple1 or self.couple2 then
-		for _,object in ipairs(minetest.env:get_objects_inside_radius(pos, 5)) do
+		for _,object in ipairs(minetest.env:get_objects_inside_radius(pos, 6)) do
 			--magnetise towards other carts
-			if object:get_player_name() == self.couple1 then
+			if object:get_luaentity() == self.couple1 or object:get_luaentity() == self.couple2 then
+				print("magnetizing")
 				local pos2 = object:getpos()
 				local modify = {}
 				modify.x = (pos2.x - pos.x) * (dir.x*2)
