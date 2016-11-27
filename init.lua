@@ -240,6 +240,22 @@ local function rail_on_step(self, dtime)
 	--allow players to push carts around with their presence
 	
 	if not self.old_vel or self.old_vel.x == 0 and self.old_vel.y == 0 and self.old_vel.z == 0 then
+		--furnace cart
+		print("trying")
+		if self.attached_item and self.attached_item:get_luaentity().itemstring == "default:furnace" then
+			local cart_dir = carts:get_rail_direction(pos, self.old_dir, nil, nil, self.railtype)
+			if vector.equals(cart_dir, {x=0, y=0, z=0}) then
+				return
+			end
+
+			local punch_interval = 1
+			time_from_last_punch = math.min(time_from_last_punch or punch_interval, punch_interval)
+			local f = 3 * (time_from_last_punch / punch_interval)
+			self.velocity = vector.multiply(cart_dir, f)
+			self.old_dir = cart_dir
+			self.punched = true
+			print("started furnace cart")
+		end
 		--normal repulsion
 		for _,object in ipairs(minetest.env:get_objects_inside_radius(pos, 2)) do
 			--if there is an ent coupled to it, check for it
@@ -249,6 +265,7 @@ local function rail_on_step(self, dtime)
 				carts:cart_repulsion_start(self,object)
 			end
 		end
+		--cart coupling
 		for _,object in ipairs(minetest.env:get_objects_inside_radius(pos, 6)) do
 			if self.couple1 ~= nil or self.couple2 ~= nil then
 				if not object:is_player() then
